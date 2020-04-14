@@ -1,16 +1,32 @@
 from flask import Flask, render_template, jsonify, request
 #from bokeh.resources import INLINE
-from bokeh.models.sources import AjaxDataSource
+from bokeh.models.sources import AjaxDataSource, ColumnDataSource
 from flask import render_template
 from bokeh.plotting import figure
 from bokeh.embed import components
-from flask import Flask
+from flask import Flask, request
 import numpy as np
 app = Flask(__name__)
 
 @app.route('/')
 def index():
     return 'Hello World!'
+
+@app.route('/query')
+def query_plot():
+    x = request.args.get("x")
+    y = request.args.get("y")
+    X = x.split(",") if "," in x else [x]
+    Y = y.split(",") if "," in y else [y]
+
+    X = [float(x) for x in X]
+    Y = [float(y) for y in Y]
+    jsn = {"x": X, "y": Y}
+    
+    plots = []
+    plots.append(make_ajax_query_plot(jsn))
+
+    return render_template('dashboard.html', plots=plots)
 
 @app.route('/dashboard/')
 def show_dashboard():
@@ -56,10 +72,17 @@ def make_ajax_plot():
     plot = figure(plot_height=300, sizing_mode='scale_width')
     plot.line('x', 'y', source=source, line_width=4)
     
-    #js_resources = INLINE.render_js()
-    #css_resources = INLINE.render_css()
-    
     script, div = components(plot)
     return script, div
 
+def make_ajax_query_plot(data):
+    source_query = ColumnDataSource()
+    source_query.data = data
+    
+    plot = figure(plot_height=300, sizing_mode='scale_width')
+    plot.line('x', 'y', source=source_query, line_width=4)
+    plot.circle('x', 'y', source=source_query,size=8, fill_color="white", color="red")
+
+    script, div = components(plot)
+    return script, div
 
